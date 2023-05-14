@@ -1,6 +1,6 @@
 #![feature(iterator_try_collect)]
 use ::rustyline::error::ReadlineError;
-use ast::env;
+use ast::env::Env;
 pub use chumsky::{prelude::*, Parser};
 pub use std::{
     error::Error,
@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn repl() -> Result<(), Box<dyn Error>> {
     let mut rl = rustyline::config()?;
-    let mut env = env::default_env();
+    let mut env = Env::default();
 
     let mut input = rl.readline("λ ");
     loop {
