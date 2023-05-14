@@ -95,7 +95,7 @@ impl<'a> Default for Env<'a> {
             Ok(Expr::Lambda(
                 Lambda {
                     body: Rc::new(body.clone()),
-                    arguments: Rc::new(parameters.clone()),
+                    bindings: Rc::new(parameters.clone()),
                 }))},
         "def" =>
         |args, env| {

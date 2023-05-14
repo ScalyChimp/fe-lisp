@@ -2,7 +2,6 @@ use crate::ast::{Env, LispError};
 use std::{collections::HashMap, fmt, rc::Rc, string::ToString};
 
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
 pub enum Type {
     Fn,
     Symbol,
@@ -20,16 +19,17 @@ pub enum Expr {
 }
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct Lambda {
-    pub(super) arguments: Rc<Expr>,
+    /// Bindings in this context are the forms required by the lambda,
+    /// which are then *bound* to the arugments that are passed to it when it's called
+    pub(super) bindings: Rc<Expr>,
     pub(super) body: Rc<Expr>,
 }
 
 impl Expr {
-    pub fn eval(&self, env: &mut Env) -> Result<Expr, LispError> {
+    pub fn eval(&self, env: &mut Env) -> Result<Self, LispError> {
         match self {
-            Self::Number(n) => Ok(Expr::Number(*n)),
+            Self::Number(n) => Ok(Self::Number(*n)),
             Self::Symbol(s) => {
                 let data =
                     env_get(s, env).ok_or_else(|| LispError::SymbolNotFound(s.to_string()))?;
@@ -37,12 +37,12 @@ impl Expr {
             }
             Self::List(list) => match &list[..] {
                 [first, rest @ ..] => match first.eval(env)? {
-                    Expr::Fn(func) => Ok(func(rest, env)?),
-                    Expr::Lambda(lambda) => {
-                        let new_env = &mut create_lambda_scope(&lambda.arguments, rest, env)?;
+                    Self::Fn(func) => Ok(func(rest, env)?),
+                    Self::Lambda(lambda) => {
+                        let new_env = &mut create_lambda_scope(&lambda.bindings, rest, env)?;
                         lambda.body.eval(new_env)
                     }
-                    x => Err(LispError::TypeMismatch(Type::Fn, x)),
+                    not_a_fn => Err(LispError::TypeMismatch(Type::Fn, not_a_fn)),
                 },
                 _ => Err(LispError::MalformedList(list.clone())),
             },
@@ -53,17 +53,17 @@ impl Expr {
 }
 
 fn create_lambda_scope<'a>(
-    params: &Rc<Expr>,
-    arg_forms: &[Expr],
+    bindings: &Rc<Expr>,
+    args: &[Expr],
     outer_env: &'a mut Env,
 ) -> Result<Env<'a>, LispError> {
-    let symbols = parse_symbol_list(params)?;
-    if symbols.len() != arg_forms.len() {
+    let symbols = parse_symbol_list(bindings)?;
+    if symbols.len() != args.len() {
         return Err(LispError::LambdaArity);
     }
 
-    let values = eval_forms(arg_forms, outer_env)?;
-    let mut data: HashMap<String, Expr> = HashMap::new();
+    let values = eval_forms(args, outer_env)?;
+    let mut data = HashMap::new();
 
     for (k, v) in symbols.iter().zip(values.iter()) {
         data.insert(k.clone(), v.clone());
@@ -84,15 +84,15 @@ fn parse_symbol_list(form: &Rc<Expr>) -> Result<Vec<String>, LispError> {
     }?;
 
     list.iter()
-        .map(|x| match x {
+        .map(|expr| match expr {
             Expr::Symbol(s) => Ok(s.clone()),
-            x => Err(LispError::TypeMismatch(Type::Symbol, x.clone())),
+            not_a_symbol => Err(LispError::TypeMismatch(Type::Symbol, not_a_symbol.clone())),
         })
         .collect()
 }
 
 pub(super) fn eval_forms(args: &[Expr], env: &mut Env) -> Result<Vec<Expr>, LispError> {
-    args.iter().map(|x| Expr::eval(x, env)).collect()
+    args.iter().map(|expr| Expr::eval(expr, env)).collect()
 }
 
 fn env_get(k: &str, env: &Env) -> Option<Expr> {
@@ -120,11 +120,11 @@ impl fmt::Debug for Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
-            Expr::Symbol(s) => s.clone(),
-            Expr::Number(n) => n.to_string(),
-            Expr::Fn(_) => "Function".to_string(),
-            Expr::Lambda(_) => "Lambda {}".to_string(),
-            Expr::List(list) => {
+            Self::Symbol(s) => s.clone(),
+            Self::Number(n) => n.to_string(),
+            Self::Fn(_) => "Function".to_string(),
+            Self::Lambda(_) => "Lambda {}".to_string(),
+            Self::List(list) => {
                 let xs: Vec<String> = list.iter().map(ToString::to_string).collect();
                 format!("({})", xs.join(","))
             }

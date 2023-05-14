@@ -34,22 +34,22 @@ impl Error for LispError {}
 impl Display for LispError {
     fn fmt(&self, mut f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LispError::TypeMismatch(expected, acquired) => write!(
+            Self::TypeMismatch(expected, acquired) => write!(
                 &mut f,
                 "Type Mismatch: expected = {:?}, got = {:?}",
                 expected, acquired
             ),
-            LispError::SymbolNotFound(symbol) => {
+            Self::SymbolNotFound(symbol) => {
                 write!(
                     &mut f,
                     "Could not find symbol '{:?}' in environment",
                     symbol
                 )
             }
-            LispError::MalformedList(list) => {
+            Self::MalformedList(list) => {
                 write!(&mut f, "Could not eval list '{:?}' in environment", list)
             }
-            LispError::LambdaArity => {
+            Self::LambdaArity => {
                 write!(&mut f, "Wrong number of forms expected for lambda form")
             }
         }
