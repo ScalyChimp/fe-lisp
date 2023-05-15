@@ -3,8 +3,12 @@ use chumsky::prelude::*;
 use chumsky::Parser;
 
 pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
-    let num = text::int(10).from_str::<i64>().unwrapped();
-    let negative_number = just('-').then(num).map(|x| Expr::Number(-x.1));
+    let positive_num = text::int(10).from_str::<i64>().unwrapped();
+    let negative_num = just('-').then(positive_num).map(|x| Expr::Number(-x.1));
+    let bool = choice::<_, Simple<char>>((
+        text::keyword::<char, _, Simple<char>>("true").to(Expr::Bool(true)),
+        text::keyword::<char, _, Simple<char>>("false").to(Expr::Bool(false)),
+    ));
 
     let sym = filter::<char, _, Simple<char>>(|&c: &char| c != '(' && c != ')' && c != ' ')
         .repeated()
@@ -20,8 +24,9 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .repeated()
             .map(Expr::List)
             .delimited_by(just("("), just(")"))
-            .or(negative_number)
-            .or(num.map(Expr::Number))
+            .or(negative_num)
+            .or(positive_num.map(Expr::Number))
+            .or(bool)
             .or(sym)
     });
 

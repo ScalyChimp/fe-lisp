@@ -11,11 +11,12 @@ pub enum Type {
 
 #[derive(Clone)]
 pub enum Expr {
-    Fn(fn(&[Expr], &mut Env) -> Result<Expr, LispError>),
     Symbol(String),
     Number(i64),
+    Bool(bool),
     List(Vec<Expr>),
     Lambda(Lambda),
+    Fn(fn(&[Expr], &mut Env) -> Result<Expr, LispError>),
 }
 
 #[derive(Clone, Debug)]
@@ -30,6 +31,7 @@ impl Expr {
     pub fn eval(&self, env: &mut Env) -> Result<Self, LispError> {
         match self {
             Self::Number(n) => Ok(Self::Number(*n)),
+            Self::Bool(n) => Ok(Self::Bool(*n)),
             Self::Symbol(s) => {
                 let data =
                     env_get(s, env).ok_or_else(|| LispError::SymbolNotFound(s.to_string()))?;
@@ -113,6 +115,7 @@ impl fmt::Debug for Expr {
             Self::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
+            Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
         }
     }
 }
@@ -121,6 +124,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
             Self::Symbol(s) => s.clone(),
+            Self::Bool(b) => b.to_string(),
             Self::Number(n) => n.to_string(),
             Self::Fn(_) => "Function".to_string(),
             Self::Lambda(_) => "Lambda {}".to_string(),

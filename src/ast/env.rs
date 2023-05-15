@@ -4,7 +4,6 @@ use super::{
 };
 use std::{collections::HashMap, rc::Rc};
 
-#[macro_export]
 macro_rules! env {
     () => {{
         let map: HashMap<String, Expr> = ::std::collections::HashMap::new();
@@ -16,6 +15,35 @@ macro_rules! env {
         map
     }};
 }
+
+macro_rules! tonicity {
+    ($op:tt) => {{
+        |args, _env| {
+            fn op(a: i64, b: i64) -> bool { a $op b}
+            let floats = parse_nums(args)?;
+            let first = floats.first().ok_or(LispError::LambdaArity)?;
+
+            let rest = &floats[1..];
+            fn f(prev: &i64, xs: &[i64]) -> bool {
+                match xs.first() {
+                    Some(x) => op(*prev, *x) && f(x, &xs[1..]),
+                    None => true,
+                }
+            }
+            Ok(Expr::Bool(f(first, rest)))
+        }
+    }};
+}
+
+fn parse_nums(list: &[Expr]) -> Result<Vec<i64>, LispError> {
+    list.iter()
+        .map(|expr| match expr {
+            Expr::Number(n) => Ok(n.clone()),
+            not_a_number => Err(LispError::TypeMismatch(Type::Number, not_a_number.clone())),
+        })
+        .collect()
+}
+
 impl<'a> Default for Env<'a> {
     fn default() -> Env<'a> {
         let data = env!(
@@ -113,7 +141,12 @@ impl<'a> Default for Env<'a> {
             let second_eval =  second_form.eval(env)?;
             env.data.insert(first_str, second_eval);
 
-            Ok(first.clone())}
+            Ok(first.clone())},
+        "=" => tonicity!(==),
+        "<" => tonicity!(<),
+        ">" => tonicity!(>),
+        "<=" => tonicity!(<=),
+        ">=" => tonicity!(>=),
         );
 
         Env { data, outer: None }
