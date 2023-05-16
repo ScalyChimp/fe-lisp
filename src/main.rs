@@ -29,22 +29,15 @@ fn repl() -> Result<(), Box<dyn Error>> {
                 }
 
                 rl.add_history_entry(line.as_str())?;
+                rl.save_history("fe-lisp.history")?;
 
                 let result = ast::eval(&input?, &mut env)?;
                 input = rl.readline(&format!("{}\nλ ", result));
             }
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => {
-                println!("Interrupted, saving history...");
-                rl.save_history("fe-lisp.history")?;
-                println!("Done");
                 break Ok(());
             }
-            Err(err) => {
-                println!("Error, saving history...");
-                rl.save_history("fe-lisp.history")?;
-                println!("Done");
-                break Err(Box::new(err));
-            }
+            Err(ref err) => print!("Err: {}", err),
         }
     }
 }
