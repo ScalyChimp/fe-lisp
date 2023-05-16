@@ -4,18 +4,6 @@ use super::{
 };
 use std::{collections::HashMap, rc::Rc};
 
-macro_rules! env {
-    () => {{
-        let map: HashMap<String, Expr> = ::std::collections::HashMap::new();
-        map
-    }};
-    ($($k:expr => $v:expr),+ $(,)? ) => {{
-        let mut map: HashMap<String, Expr>  = ::std::collections::HashMap::new();
-        $(map.insert($k.to_string(), Expr::Fn($v));)+
-        map
-    }};
-}
-
 macro_rules! tonicity {
     ($op:tt) => {{
         |args, _env| {
@@ -34,6 +22,18 @@ fn parse_nums(list: &[Expr]) -> Result<Vec<i64>, LispError> {
             not_a_number => Err(LispError::TypeMismatch(Type::Number, not_a_number.clone())),
         })
         .collect()
+}
+
+macro_rules! env {
+    () => {{
+        let map: HashMap<String, Expr> = ::std::collections::HashMap::new();
+        map
+    }};
+    ($($k:expr => $v:expr),+ $(,)? ) => {{
+        let mut map: HashMap<String, Expr>  = ::std::collections::HashMap::new();
+        $(map.insert($k.to_string(), Expr::Fn($v));)+
+        map
+    }};
 }
 
 impl<'a> Default for Env<'a> {
