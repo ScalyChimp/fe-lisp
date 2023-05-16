@@ -19,18 +19,10 @@ macro_rules! env {
 macro_rules! tonicity {
     ($op:tt) => {{
         |args, _env| {
-            fn op(a: i64, b: i64) -> bool { a $op b}
-            let floats = parse_nums(args)?;
-            let first = floats.first().ok_or(LispError::LambdaArity)?;
-
-            let rest = &floats[1..];
-            fn f(prev: &i64, xs: &[i64]) -> bool {
-                match xs.first() {
-                    Some(x) => op(*prev, *x) && f(x, &xs[1..]),
-                    None => true,
-                }
-            }
-            Ok(Expr::Bool(f(first, rest)))
+            let args = parse_nums(args)?;
+            fn op(a: i64, b: i64) -> bool { a $op b }
+            let is_tonic = args.windows(2).all(|x| op(x[0], x[1]));
+            Ok(Expr::Bool(is_tonic))
         }
     }};
 }
