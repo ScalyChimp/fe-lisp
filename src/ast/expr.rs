@@ -131,7 +131,7 @@ impl fmt::Display for Expr {
             Self::Lambda(_) => "Lambda {}".to_string(),
             Self::List(list) => {
                 let xs: Vec<String> = list.iter().map(ToString::to_string).collect();
-                format!("({})", xs.join(","))
+                format!("'({})", xs.join(" "))
             }
         };
         write!(f, "{}", str)
