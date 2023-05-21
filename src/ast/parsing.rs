@@ -16,7 +16,7 @@ pub fn parse_expr() -> impl Parser<char, Expr, Error = Simple<char>> {
         .at_most(64)
         .padded()
         .map(|x| x.iter().collect::<String>())
-        .map(Expr::Symbol);
+        .map(|x| Expr::Symbol(x.trim().to_string()));
 
     let expr = recursive(|expr| {
         expr.padded()
