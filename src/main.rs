@@ -4,7 +4,7 @@ use ast::env::Env;
 pub use chumsky::{prelude::*, Parser};
 pub use std::{
     error::Error,
-    io::{self, stdout, Write as IoWrite},
+    io::{self, stdout, Write},
 };
 
 mod ast;
