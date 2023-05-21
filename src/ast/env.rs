@@ -141,6 +141,17 @@ impl<'a> Default for Env<'a> {
         ">" => tonicity!(>),
         "<=" => tonicity!(<=),
         ">=" => tonicity!(>=),
+        "if" =>
+        |args, env| {
+            if args.len() > 3 { return Err(LispError::LambdaArity) };
+            let test = &args[0];
+            match test.eval(env) {
+                Ok(Expr::Bool(true)) => return args[1].eval(env),
+                Ok(Expr::Bool(false)) => return args[2].eval(env),
+                Err(e) => Err(e),
+                Ok(not_bool) => Err(LispError::TypeMismatch(Type::Bool, not_bool))
+            }
+        }
         );
 
         Env { data, outer: None }

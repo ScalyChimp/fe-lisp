@@ -7,6 +7,7 @@ pub enum Type {
     Symbol,
     Number,
     List,
+    Bool,
 }
 
 #[derive(Clone)]
