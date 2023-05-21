@@ -9,10 +9,17 @@ mod parsing;
 use crate::Env;
 use expr::{Expr, Type};
 
-pub fn eval(input: &str, env: &mut Env) -> Result<Expr, LispError> {
-    let ast = parsing::parser().parse(input).unwrap();
-    // dbg!(&ast);
+pub fn eval_expr(input: &str, env: &mut Env) -> Result<Expr, LispError> {
+    let ast = parsing::parse_expr().parse(input).unwrap();
     ast.eval(env)
+}
+
+pub fn eval_script(input: &str, env: &mut Env) -> Result<Expr, LispError> {
+    let ast = parsing::parse_script().parse(input).unwrap();
+    for expr in &ast[..ast.len() - 1] {
+        expr.eval(env)?;
+    }
+    ast[ast.len() - 1].eval(env)
 }
 
 #[derive(Debug)]

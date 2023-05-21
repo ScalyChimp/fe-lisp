@@ -2,7 +2,7 @@ use crate::ast::Expr;
 use chumsky::prelude::*;
 use chumsky::Parser;
 
-pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
+pub fn parse_expr() -> impl Parser<char, Expr, Error = Simple<char>> {
     let positive_num = text::int(10).from_str::<i64>().unwrapped();
     let negative_num = just('-').then(positive_num).map(|x| Expr::Number(-x.1));
     let bool = choice::<_, Simple<char>>((
@@ -18,9 +18,8 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
         .map(|x| x.iter().collect::<String>())
         .map(Expr::Symbol);
 
-    let sexpr = recursive(|sexpr| {
-        sexpr
-            .padded()
+    let expr = recursive(|expr| {
+        expr.padded()
             .repeated()
             .map(Expr::List)
             .delimited_by(just("("), just(")"))
@@ -30,5 +29,10 @@ pub fn parser() -> impl Parser<char, Expr, Error = Simple<char>> {
             .or(sym)
     });
 
-    sexpr
+    expr
+}
+pub fn parse_script() -> impl Parser<char, Vec<Expr>, Error = Simple<char>> {
+    let expr = parse_expr();
+
+    expr.padded().repeated()
 }
