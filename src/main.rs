@@ -36,7 +36,7 @@ fn eval_script(script: PathBuf, env: &mut Env) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn repl(mut env: &mut Env) -> Result<(), Box<dyn Error>> {
+fn repl(env: &mut Env) -> Result<(), Box<dyn Error>> {
     let mut rl = rustyline::config()?;
 
     println!("fe-lisp repl v0.0.1");
@@ -52,7 +52,7 @@ fn repl(mut env: &mut Env) -> Result<(), Box<dyn Error>> {
                 rl.add_history_entry(line.as_str())?;
                 rl.save_history("fe-lisp.history")?;
 
-                let result = ast::eval_expr(&input?, &mut env)?;
+                let result = ast::eval_expr(&input?, env)?;
                 input = rl.readline(&format!("{}\nλ ", result));
             }
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => {

@@ -15,12 +15,12 @@ macro_rules! tonicity {
     }};
 }
 
-fn parse_nums(list: &[Expr], mut env: &mut Env) -> Result<Vec<i64>, LispError> {
+fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<i64>, LispError> {
     list.iter()
-        .map(|e| e.eval(&mut env))
+        .map(|e| e.eval(env))
         .map(|expr| match expr {
-            Ok(Expr::Number(n)) => Ok(n.clone()),
-            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Number, not_a_number.clone())),
+            Ok(Expr::Number(n)) => Ok(n),
+            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Number, not_a_number)),
             Err(e) => Err(e),
         })
         .collect()
@@ -146,8 +146,8 @@ impl<'a> Default for Env<'a> {
             if args.len() > 3 { return Err(LispError::LambdaArity) };
             let test = &args[0];
             match test.eval(env) {
-                Ok(Expr::Bool(true)) => return args[1].eval(env),
-                Ok(Expr::Bool(false)) => return args[2].eval(env),
+                Ok(Expr::Bool(true)) => args[1].eval(env),
+                Ok(Expr::Bool(false)) => args[2].eval(env),
                 Err(e) => Err(e),
                 Ok(not_bool) => Err(LispError::TypeMismatch(Type::Bool, not_bool))
             }
