@@ -6,8 +6,8 @@ use std::{collections::HashMap, rc::Rc};
 
 macro_rules! tonicity {
     ($op:tt) => {{
-        |args, _env| {
-            let args = parse_nums(args)?;
+        |args, env| {
+            let args = parse_nums(&args, env)?;
             fn op(a: i64, b: i64) -> bool { a $op b }
             let is_tonic = args.windows(2).all(|x| op(x[0], x[1]));
             Ok(Expr::Bool(is_tonic))
@@ -15,11 +15,13 @@ macro_rules! tonicity {
     }};
 }
 
-fn parse_nums(list: &[Expr]) -> Result<Vec<i64>, LispError> {
+fn parse_nums(list: &[Expr], mut env: &mut Env) -> Result<Vec<i64>, LispError> {
     list.iter()
+        .map(|e| e.eval(&mut env))
         .map(|expr| match expr {
-            Expr::Number(n) => Ok(n.clone()),
-            not_a_number => Err(LispError::TypeMismatch(Type::Number, not_a_number.clone())),
+            Ok(Expr::Number(n)) => Ok(n.clone()),
+            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Number, not_a_number.clone())),
+            Err(e) => Err(e),
         })
         .collect()
 }
