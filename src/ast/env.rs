@@ -1,8 +1,8 @@
 use super::{
-    expr::{eval_forms, Expr, Lambda, Type},
+    expr::{Expr, Lambda, Type},
     LispError,
 };
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc, time::Instant};
 
 macro_rules! tonicity {
     ($op:tt) => {{
@@ -43,72 +43,34 @@ impl<'a> Default for Env<'a> {
         let data = env!(
         "+" =>
         |args, env| {
-            let args = &eval_forms(args, env)?[..];
-            Ok(Expr::Number(
-                args.iter()
-                    .map(|x| -> Result<&i64, LispError> {
-                        if let Expr::Number(n) = x {
-                            Ok(n)
-                        } else {
-                            Err(LispError::TypeMismatch(Type::Number, x.clone()))
-                        }
-                    })
-                    .sum::<Result<i64, _>>()?,
-            ))},
+            let args = &parse_nums(args, env)?[..];
+            Ok(Expr::Number(args.iter().sum()))
+        },
         "-" =>
         |args, env| {
-            let args = &eval_forms(args, env)?[..];
+            let args = &parse_nums(args, env)?[..];
             let first = &args[0];
             Ok(Expr::Number(
-                if let Expr::Number(n) = args[0] {
-                    n
-                } else {
-                    return Err(LispError::TypeMismatch(Type::Number, first.clone()));
-                } - args[1..]
+                first
+                 - args[1..]
                     .iter()
-                    .map(|x| {
-                        if let Expr::Number(n) = x {
-                            Ok(n)
-                        } else {
-                            Err(LispError::TypeMismatch(Type::Number, first.clone()))
-                        }
-                    })
-                    .sum::<Result<i64, _>>()?,
-            ))},
+                    .sum::<i64>()))
+        },
         "*" =>
         |args, env| {
-            let args = &eval_forms(args, env)?[..];
-            Ok(Expr::Number(
-                args.iter()
-                    .map(|x| -> Result<&i64, LispError> {
-                        if let Expr::Number(n) = x {
-                            Ok(n)
-                        } else {
-                            Err(LispError::TypeMismatch(Type::Number, x.clone()))
-                        }
-                    })
-                    .product::<Result<i64, _>>()?,
-            ))},
+            let args = &parse_nums(args, env)?[..];
+            Ok(Expr::Number(args.iter().product()))
+        },
         "/"  =>
         |args, env| {
-            let args = &eval_forms(args, env)?[..];
+            let args = &parse_nums(args, env)?[..];
             let first = &args[0];
             Ok(Expr::Number(
-                if let Expr::Number(n) = args[0] {
-                    n
-                } else {
-                    return Err(LispError::TypeMismatch(Type::Number, first.clone()));
-                } / args[1..]
+                first
+                 / args[1..]
                     .iter()
-                    .map(|x| {
-                        if let Expr::Number(n) = x {
-                            Ok(n)
-                        } else {
-                            Err(LispError::TypeMismatch(Type::Number, first.clone()))
-                        }
-                    })
-                    .product::<Result<i64, _>>()?,
-            ))},
+                    .product::<i64>()))
+        },
         "fn" =>
         |args, _env| {
             let parameters = args.first().ok_or(LispError::LambdaArity)?;
@@ -117,8 +79,10 @@ impl<'a> Default for Env<'a> {
             Ok(Expr::Lambda(
                 Lambda {
                     body: Rc::new(body.clone()),
-                    bindings: Rc::new(parameters.clone()),
-                }))},
+                    bindings: Rc::new(parameters.clone())
+                }
+            ))
+        },
         "def" =>
         |args, env| {
             let first = &args[0];
@@ -135,7 +99,8 @@ impl<'a> Default for Env<'a> {
             let second_eval =  second_form.eval(env)?;
             env.data.insert(first_str, second_eval);
 
-            Ok(first.clone())},
+            Ok(first.clone())
+        },
         "=" => tonicity!(==),
         "<" => tonicity!(<),
         ">" => tonicity!(>),
@@ -194,6 +159,16 @@ impl<'a> Default for Env<'a> {
             println!("{}", result);
             Ok(result)
         }
+        "time" =>
+        |args, env| {
+            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            let start = Instant::now();
+            let result = args[0].eval(env)?;
+            let end = Instant::now();
+            let eval_time = end - start;
+            println!("Eval time for expr: {} = {:?}", args[0], eval_time);
+            Ok(result)
+        },
         );
 
         Env { data, outer: None }
