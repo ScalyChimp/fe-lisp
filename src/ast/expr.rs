@@ -23,7 +23,7 @@ pub enum Expr {
 #[derive(Clone, Debug)]
 pub struct Lambda {
     /// Bindings in this context are the forms required by the lambda,
-    /// which are then *bound* to the arugments that are passed to it when it's called
+    /// which are then *bound* to the arugments that are passed to the lambda when it's called
     pub(super) bindings: Rc<Expr>,
     pub(super) body: Rc<Expr>,
 }
