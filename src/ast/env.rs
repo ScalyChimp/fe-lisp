@@ -151,6 +151,11 @@ impl<'a> Default for Env<'a> {
                 Err(e) => Err(e),
                 Ok(not_bool) => Err(LispError::TypeMismatch(Type::Bool, not_bool))
             }
+        },
+        "do" =>
+        |args, env| {
+            let _: Vec<_> = args[..args.len()].iter().map(|e| e.eval(env)).try_collect()?;
+            args.last().expect("args list not empty").eval(env)
         }
         );
 
