@@ -155,7 +155,44 @@ impl<'a> Default for Env<'a> {
         "do" =>
         |args, env| {
             let _: Vec<_> = args[..args.len()].iter().map(|e| e.eval(env)).try_collect()?;
-            args.last().expect("args list not empty").eval(env)
+            args.last().expect("args list should not be empty").eval(env)
+        },
+        "let" =>
+        |args, env| {
+            if args.len() != 2 { return Err(LispError::LambdaArity) };
+            let body = &args[1];
+            let bindings = match args.first().unwrap() {
+                Expr::List(list) => list,
+                not_a_list => Err(LispError::TypeMismatch(Type::List, not_a_list.clone()))?,
+            };
+            let mut env = Env { data: HashMap::new(), outer: Some(&env) };
+            bindings.chunks(2).map(|pair| {
+                let symbol = &pair[0];
+                let value = &pair[1];
+                let symbol = match symbol {
+                    Expr::Symbol(s) => Ok(s.clone()),
+                    x => Err(LispError::TypeMismatch(Type::Symbol, x.clone()))
+                }?;
+                let evaluated = value.eval(&mut env)?;
+                env.data.insert(symbol, evaluated);
+                Ok(())
+            }).try_collect()?;
+
+            body.eval(&mut env)
+        },
+        "dbg" =>
+        |args, env| {
+            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            let result = args[0].eval(env);
+            dbg!(&result);
+            result
+        },
+        "print" =>
+        |args, env| {
+            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            let result = args[0].eval(env)?;
+            println!("{}", result);
+            Ok(result)
         }
         );
 
