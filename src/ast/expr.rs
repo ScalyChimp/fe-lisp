@@ -127,8 +127,8 @@ impl fmt::Display for Expr {
             Self::Symbol(s) => s.clone(),
             Self::Bool(b) => b.to_string(),
             Self::Number(n) => n.to_string(),
-            Self::Fn(_) => "Function".to_string(),
-            Self::Lambda(_) => "Lambda {}".to_string(),
+            Self::Fn(_) => "#<builtin>".to_string(),
+            Self::Lambda(_) => "#<function>".to_string(),
             Self::List(list) => {
                 let xs: Vec<String> = list.iter().map(ToString::to_string).collect();
                 format!("'({})", xs.join(" "))
