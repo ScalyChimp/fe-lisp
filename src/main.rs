@@ -45,14 +45,17 @@ fn repl(env: &mut Env) -> Result<(), Box<dyn Error>> {
         match input {
             Ok(ref line) => {
                 if line.is_empty() {
-                    input = Ok(rl.readline("λ ")?);
+                    input = rl.readline("λ ");
                     continue;
                 }
 
                 rl.add_history_entry(line.as_str())?;
                 rl.save_history("fe-lisp.history")?;
 
-                let result = ast::eval_expr(&input?, env)?;
+                let result = match ast::eval_expr(&input?, env) {
+                    Ok(result) => result.to_string(),
+                    Err(err) => format!("Error - {err}"),
+                };
                 input = rl.readline(&format!("{}\nλ ", result));
             }
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => {
