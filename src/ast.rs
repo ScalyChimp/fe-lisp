@@ -43,7 +43,7 @@ impl Display for LispError {
         match self {
             Self::TypeMismatch(expected, acquired) => write!(
                 &mut f,
-                "Type Mismatch: expected = {:?}, got = {:?}",
+                "Type Mismatch, expected: {:?}, got: {:?}",
                 expected, acquired
             ),
             Self::SymbolNotFound(symbol) => {
@@ -58,6 +58,7 @@ impl Display for LispError {
             }
             Self::LambdaArity => {
                 write!(&mut f, "Wrong number of forms expected for lambda form")
+                // FIXME: I use this for stuff that isn't accurately explained by this error message.
             }
         }
     }

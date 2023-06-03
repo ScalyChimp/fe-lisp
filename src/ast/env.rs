@@ -165,7 +165,7 @@ impl<'a> Default for Env<'a> {
                 Expr::List(list) => list,
                 not_a_list => Err(LispError::TypeMismatch(Type::List, not_a_list.clone()))?,
             };
-            let mut env = Env { data: HashMap::new(), outer: Some(&env) };
+            let mut env = Env { data: HashMap::new(), outer: Some(env) };
             bindings.chunks(2).map(|pair| {
                 let symbol = &pair[0];
                 let value = &pair[1];
