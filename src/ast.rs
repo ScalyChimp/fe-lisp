@@ -34,7 +34,7 @@ pub enum LispError {
     MalformedList(Vec<Expr>),
 
     /// Wrong number of arguments
-    LambdaArity,
+    Arity,
 }
 
 impl Error for LispError {}
@@ -56,7 +56,7 @@ impl Display for LispError {
             Self::MalformedList(list) => {
                 write!(&mut f, "Could not eval list '{:?}' in environment", list)
             }
-            Self::LambdaArity => {
+            Self::Arity => {
                 write!(&mut f, "Wrong number of forms expected for lambda form")
                 // FIXME: I use this for stuff that isn't accurately explained by this error message.
             }

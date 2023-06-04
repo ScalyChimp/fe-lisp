@@ -62,7 +62,7 @@ fn create_lambda_scope<'a>(
 ) -> Result<Env<'a>, LispError> {
     let symbols = parse_symbol_list(bindings)?;
     if symbols.len() != args.len() {
-        return Err(LispError::LambdaArity);
+        return Err(LispError::Arity);
     }
 
     let values = eval_forms(args, outer_env)?;

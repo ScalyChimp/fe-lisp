@@ -73,9 +73,9 @@ impl<'a> Default for Env<'a> {
         },
         "fn" =>
         |args, _env| {
-            let parameters = args.first().ok_or(LispError::LambdaArity)?;
-            let body = args.get(1).ok_or(LispError::LambdaArity)?;
-            if args.len() > 2 { return Err(LispError::LambdaArity) };
+            let parameters = args.first().ok_or(LispError::Arity)?;
+            let body = args.get(1).ok_or(LispError::Arity)?;
+            if args.len() > 2 { return Err(LispError::Arity) };
             Ok(Expr::Lambda(
                 Lambda {
                     body: Rc::new(body.clone()),
@@ -91,10 +91,10 @@ impl<'a> Default for Env<'a> {
                 x => Err(LispError::TypeMismatch(Type::Symbol, x.clone()))
             }?;
             let second_form = args.get(1).ok_or(
-                LispError::LambdaArity
+                LispError::Arity
             )?;
             if args.len() > 2 {
-                return Err(LispError::LambdaArity)
+                return Err(LispError::Arity)
             }
             let second_eval =  second_form.eval(env)?;
             env.data.insert(first_str, second_eval);
@@ -108,7 +108,7 @@ impl<'a> Default for Env<'a> {
         ">=" => tonicity!(>=),
         "if" =>
         |args, env| {
-            if args.len() > 3 { return Err(LispError::LambdaArity) };
+            if args.len() > 3 { return Err(LispError::Arity) };
             let test = &args[0];
             match test.eval(env) {
                 Ok(Expr::Bool(true)) => args[1].eval(env),
@@ -117,14 +117,14 @@ impl<'a> Default for Env<'a> {
                 Ok(not_bool) => Err(LispError::TypeMismatch(Type::Bool, not_bool))
             }
         },
-        "do" =>
+        "do" => // TODO: `def`s inside a `do` block leak, so a new scope should be created to avoid this.
         |args, env| {
             let _: Vec<_> = args[..args.len()].iter().map(|e| e.eval(env)).try_collect()?;
             args.last().expect("args list should not be empty").eval(env)
         },
         "let" =>
         |args, env| {
-            if args.len() != 2 { return Err(LispError::LambdaArity) };
+            if args.len() != 2 { return Err(LispError::Arity) };
             let body = &args[1];
             let bindings = match args.first().unwrap() {
                 Expr::List(list) => list,
@@ -147,21 +147,21 @@ impl<'a> Default for Env<'a> {
         },
         "dbg" =>
         |args, env| {
-            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            if args.len() != 1 { return Err(LispError::Arity) };
             let result = args[0].eval(env);
             dbg!(&result);
             result
         },
         "print" =>
         |args, env| {
-            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            if args.len() != 1 { return Err(LispError::Arity) };
             let result = args[0].eval(env)?;
             println!("{}", result);
             Ok(result)
-        }
+        },
         "time" =>
         |args, env| {
-            if args.len() != 1 { return Err(LispError::LambdaArity) };
+            if args.len() != 1 { return Err(LispError::Arity) };
             let start = Instant::now();
             let result = args[0].eval(env)?;
             let end = Instant::now();
