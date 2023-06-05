@@ -17,8 +17,7 @@ macro_rules! tonicity {
 
 fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<i64>, LispError> {
     list.iter()
-        .map(|e| e.eval(env))
-        .map(|expr| match expr {
+        .map(|expr| match expr.eval(env) {
             Ok(Expr::Number(n)) => Ok(n),
             Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Number, not_a_number)),
             Err(e) => Err(e),
@@ -165,8 +164,8 @@ impl<'a> Default for Env<'a> {
             let start = Instant::now();
             let result = args[0].eval(env)?;
             let end = Instant::now();
-            let eval_time = end - start;
-            println!("Eval time for expr: {} = {:?}", args[0], eval_time);
+            let difference = end - start;
+            println!("Eval time for expr: {} = {:?}", args[0], difference);
             Ok(result)
         },
         );
