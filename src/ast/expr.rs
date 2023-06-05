@@ -30,18 +30,20 @@ pub struct Lambda {
 
 impl Expr {
     pub fn eval(&self, env: &mut Env) -> Result<Self, LispError> {
+        use Expr::*;
+
         match self {
-            Self::Number(n) => Ok(Self::Number(*n)),
-            Self::Bool(n) => Ok(Self::Bool(*n)),
-            Self::Symbol(s) => {
+            Number(n) => Ok(Number(*n)),
+            Bool(n) => Ok(Bool(*n)),
+            Symbol(s) => {
                 let data =
                     env_get(s, env).ok_or_else(|| LispError::SymbolNotFound(s.to_string()))?;
                 Ok(data)
             }
-            Self::List(list) => match &list[..] {
+            List(list) => match &list[..] {
                 [first, rest @ ..] => match first.eval(env)? {
-                    Self::Fn(func) => Ok(func(rest, env)?),
-                    Self::Lambda(lambda) => {
+                    Fn(func) => Ok(func(rest, env)?),
+                    Lambda(lambda) => {
                         let new_env = &mut create_lambda_scope(&lambda.bindings, rest, env)?;
                         lambda.body.eval(new_env)
                     }
@@ -49,8 +51,8 @@ impl Expr {
                 },
                 _ => Err(LispError::MalformedList(list.clone())),
             },
-            Self::Fn(x) => Err(LispError::TypeMismatch(Type::List, Self::Fn(*x))),
-            Self::Lambda(x) => Err(LispError::TypeMismatch(Type::List, Self::Lambda(x.clone()))),
+            Fn(x) => Err(LispError::TypeMismatch(Type::List, Fn(*x))),
+            Lambda(x) => Err(LispError::TypeMismatch(Type::List, Lambda(x.clone()))),
         }
     }
 }
