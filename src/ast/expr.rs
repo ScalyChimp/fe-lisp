@@ -1,5 +1,6 @@
 use crate::ast::{Env, LispError};
-use std::{collections::HashMap, fmt, rc::Rc, string::ToString};
+use rustc_hash::FxHashMap as HashMap;
+use std::{fmt, rc::Rc, string::ToString};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Type {
@@ -68,7 +69,7 @@ fn create_lambda_scope<'a>(
     }
 
     let values = eval_forms(args, outer_env)?;
-    let mut data = HashMap::new();
+    let mut data = HashMap::default();
 
     for (k, v) in symbols.iter().zip(values.iter()) {
         data.insert(k.clone(), v.clone());

@@ -2,7 +2,8 @@ use super::{
     expr::{Expr, Lambda, Type},
     LispError,
 };
-use std::{collections::HashMap, rc::Rc, time::Instant};
+use rustc_hash::FxHashMap as HashMap;
+use std::{rc::Rc, time::Instant};
 
 macro_rules! tonicity {
     ($op:tt) => {{
@@ -26,12 +27,8 @@ fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<i64>, LispError> {
 }
 
 macro_rules! env {
-    () => {{
-        let map: HashMap<String, Expr> = ::std::collections::HashMap::new();
-        map
-    }};
     ($($k:expr => $v:expr),+ $(,)? ) => {{
-        let mut map: HashMap<String, Expr>  = ::std::collections::HashMap::new();
+        let mut map: ::rustc_hash::FxHashMap<String, Expr>  = ::rustc_hash::FxHashMap::default();
         $(map.insert($k.to_string(), Expr::Fn($v));)+
         map
     }};
@@ -129,7 +126,7 @@ impl<'a> Default for Env<'a> {
                 Expr::List(list) => list,
                 not_a_list => Err(LispError::TypeMismatch(Type::List, not_a_list.clone()))?,
             };
-            let mut env = Env { data: HashMap::new(), outer: Some(env) };
+            let mut env = Env { data: HashMap::default(), outer: Some(env) };
             bindings.chunks(2).map(|pair| {
                 let symbol = &pair[0];
                 let value = &pair[1];
