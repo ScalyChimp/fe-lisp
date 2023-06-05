@@ -71,8 +71,8 @@ fn create_lambda_scope<'a>(
     let values = eval_forms(args, outer_env)?;
     let mut data = HashMap::default();
 
-    for (k, v) in symbols.iter().zip(values.iter()) {
-        data.insert(k.clone(), v.clone());
+    for (k, v) in symbols.into_iter().zip(values.into_iter()) {
+        data.insert(k, v);
     }
 
     Ok(Env {
