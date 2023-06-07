@@ -39,7 +39,7 @@ fn eval_script(script: PathBuf, env: &mut Env) -> Result<(), Box<dyn Error>> {
 fn repl(env: &mut Env) -> Result<(), Box<dyn Error>> {
     let mut rl = rustyline::config()?;
 
-    println!("fe-lisp repl v0.0.1");
+    println!("wilf repl v0.0.1");
     let mut input = rl.readline("λ ");
     loop {
         match input {
@@ -50,7 +50,7 @@ fn repl(env: &mut Env) -> Result<(), Box<dyn Error>> {
                 }
 
                 rl.add_history_entry(line.as_str())?;
-                rl.save_history("fe-lisp.history")?;
+                rl.save_history("wilf.history")?;
 
                 let result = match ast::eval_expr(&input?, env) {
                     Ok(result) => result.to_string(),

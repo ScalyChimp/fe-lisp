@@ -19,9 +19,9 @@ pub fn config() -> Result<Editor<Config, FileHistory>, ReadlineError> {
     };
     let mut rl = Editor::new()?;
     rl.set_helper(Some(config));
-    match rl.load_history("fe-lisp.history") {
-        Ok(()) => println!("history loaded from fe-lisp.history"),
-        Err(err) => eprint!("error loading history from fe-lisp.history: {}", err),
+    match rl.load_history("wilf.history") {
+        Ok(()) => println!("history loaded from wilf.history"),
+        Err(err) => eprint!("error loading history from wilf.history: {}", err),
     }
 
     Ok(rl)
