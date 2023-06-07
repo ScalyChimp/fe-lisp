@@ -47,11 +47,7 @@ impl Display for LispError {
                 expected, acquired
             ),
             Self::SymbolNotFound(symbol) => {
-                write!(
-                    &mut f,
-                    "Could not find symbol '{:?}' in environment",
-                    symbol
-                )
+                write!(&mut f, "Could not find symbol {:?} in environment", symbol)
             }
             Self::MalformedList(list) => {
                 write!(&mut f, "Could not eval list '{:?}' in environment", list)

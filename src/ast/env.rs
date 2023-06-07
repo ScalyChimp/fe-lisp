@@ -113,10 +113,12 @@ impl<'a> Default for Env<'a> {
                 Ok(not_bool) => Err(LispError::TypeMismatch(Type::Bool, not_bool))
             }
         },
-        "do" => // TODO: `def`s inside a `do` block leak, so a new scope should be created to avoid this.
+        "do" =>
         |args, env| {
-            let _: Vec<_> = args[..args.len()].iter().map(|e| e.eval(env)).try_collect()?;
-            args.last().expect("args list should not be empty").eval(env)
+            let rest = &args[..args.len()];
+            let mut env = Env {data: HashMap::default(), outer: Some(env)};
+            let _: Vec<_> = rest.iter().map(|e| e.eval(&mut env)).try_collect()?;
+            args.last().expect("args list should not be empty").eval(&mut env) // TODO: Fix possible panic.
         },
         "let" =>
         |args, env| {
