@@ -1,5 +1,5 @@
 use super::{
-    expr::{Expr, Lambda, Type},
+    expr::{eval_forms, Expr, Lambda, Type},
     LispError,
 };
 use rustc_hash::FxHashMap as HashMap;
@@ -116,8 +116,8 @@ impl<'a> Default for Env<'a> {
         "do" =>
         |args, env| {
             let rest = &args[..args.len()];
-            let mut env = Env {data: HashMap::default(), outer: Some(env)};
-            let _: Vec<_> = rest.iter().map(|e| e.eval(&mut env)).try_collect()?;
+            let mut env = Env::with_outer(env);
+            let _ = eval_forms(rest, &mut env)?;
             args.last().expect("args list should not be empty").eval(&mut env) // TODO: Fix possible panic.
         },
         "let" =>
@@ -128,7 +128,7 @@ impl<'a> Default for Env<'a> {
                 Expr::List(list) => list,
                 not_a_list => Err(LispError::TypeMismatch(Type::List, not_a_list.clone()))?,
             };
-            let mut env = Env { data: HashMap::default(), outer: Some(env) };
+            let mut env = Env::with_outer(env);
             bindings.chunks(2).map(|pair| {
                 let symbol = &pair[0];
                 let value = &pair[1];
@@ -176,4 +176,13 @@ impl<'a> Default for Env<'a> {
 pub struct Env<'a> {
     pub(super) data: HashMap<String, Expr>,
     pub(super) outer: Option<&'a Env<'a>>,
+}
+
+impl Env<'_> {
+    fn with_outer<'a>(env: &'a mut Env<'_>) -> Env<'a> {
+        Env {
+            outer: Some(env),
+            data: HashMap::default(),
+        }
+    }
 }
