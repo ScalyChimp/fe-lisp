@@ -31,8 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn eval_script(script: PathBuf, env: &mut Env) -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string(script)?;
-    let result = ast::eval_script(&input, env)?;
-    println!("Result: {}", result);
+    ast::eval_script(&input, env)?;
     Ok(())
 }
 
