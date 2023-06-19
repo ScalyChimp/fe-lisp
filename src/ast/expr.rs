@@ -19,6 +19,7 @@ pub enum Expr {
     List(Vec<Expr>),
     Lambda(Lambda),
     Fn(fn(&[Expr], &mut Env) -> Result<Expr, LispError>),
+    Macro(Macro),
 }
 
 #[derive(Clone, Debug)]
@@ -29,7 +30,51 @@ pub struct Lambda {
     pub(super) body: Rc<Expr>,
 }
 
+#[derive(Clone, Debug)]
+pub struct Macro {
+    /// The difference between this and a lambda is that the arguments are passed unevaluated.
+    /// Macros are also expanded before evaluating anything else.
+    pub(super) bindings: Rc<Expr>,
+    pub(super) body: Rc<Expr>,
+}
+
 impl Expr {
+    /// Expands one level of macros.
+    pub(super) fn expand_once(&self, env: &mut Env) -> Result<Expr, LispError> {
+        use Expr::*;
+
+        match self {
+            List(list) => match &list[..] {
+                [sym @ Symbol(_), args @ ..] => match sym.eval(env) {
+                    Ok(Macro(m)) => {
+                        let mut new_env = create_scope(&m.bindings, args, env)?;
+                        dbg!(&m);
+                        m.body.eval(&mut new_env)
+                    }
+                    _ => Ok(self.clone()),
+                },
+                not_a_macro => Ok(List(not_a_macro.to_vec())),
+            },
+            not_a_list => Ok(not_a_list.clone()),
+        }
+    }
+
+    /// Expands all macros in an ast.
+    pub fn expand_all(&self, env: &mut Env) -> Result<Expr, LispError> {
+        use Expr::*;
+
+        match self {
+            List(list) => {
+                let mut list = list.clone();
+                for expr in list[1..].iter_mut() {
+                    *expr = expr.expand_all(env)?
+                }
+                List(list).expand_once(env)
+            }
+            _ => Ok(self.clone()),
+        }
+    }
+
     pub fn eval(&self, env: &mut Env) -> Result<Self, LispError> {
         use Expr::*;
         use LispError::*;
@@ -45,7 +90,8 @@ impl Expr {
                 [first, rest @ ..] => match first.eval(env)? {
                     Fn(func) => Ok(func(rest, env)?),
                     Lambda(lambda) => {
-                        let new_env = &mut create_lambda_scope(&lambda.bindings, rest, env)?;
+                        let args = eval_forms(rest, env)?;
+                        let new_env = &mut create_scope(&lambda.bindings, &args, env)?;
                         lambda.body.eval(new_env)
                     }
                     not_a_fn => Err(TypeMismatch(Type::Fn, not_a_fn)),
@@ -54,11 +100,12 @@ impl Expr {
             },
             Fn(x) => Err(TypeMismatch(Type::List, Fn(*x))),
             Lambda(x) => Err(TypeMismatch(Type::List, Lambda(x.clone()))),
+            Macro(_) => unreachable!("all macros should be expanded before evaluation"),
         }
     }
 }
 
-fn create_lambda_scope<'a>(
+fn create_scope<'a>(
     bindings: &Rc<Expr>,
     args: &[Expr],
     outer_env: &'a mut Env,
@@ -68,11 +115,10 @@ fn create_lambda_scope<'a>(
         return Err(LispError::Arity);
     }
 
-    let values = eval_forms(args, outer_env)?;
     let mut data = HashMap::default();
 
-    for (k, v) in symbols.into_iter().zip(values.into_iter()) {
-        data.insert(k, v);
+    for (k, v) in symbols.into_iter().zip(args.iter()) {
+        data.insert(k, v.clone());
     }
 
     Ok(Env {
@@ -120,6 +166,7 @@ impl fmt::Debug for Expr {
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
+            Expr::Macro(_) => f.debug_tuple("Macro").finish(),
         }
     }
 }
@@ -131,6 +178,7 @@ impl fmt::Display for Expr {
             Self::Bool(b) => b.to_string(),
             Self::Number(n) => n.to_string(),
             Self::Fn(_) => "#<builtin>".to_string(),
+            Self::Macro(_) => "#<macro>".to_string(),
             Self::Lambda(_) => "#<function>".to_string(),
             Self::List(list) => {
                 let xs: Vec<String> = list.iter().map(ToString::to_string).collect();

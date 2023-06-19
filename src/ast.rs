@@ -11,15 +11,18 @@ use expr::{Expr, Type};
 
 pub fn eval_expr(input: &str, env: &mut Env) -> Result<Expr, LispError> {
     let ast = parsing::parse_expr().parse(input).unwrap();
+
+    let ast = ast.expand_all(env)?;
     ast.eval(env)
 }
 
 pub fn eval_script(input: &str, env: &mut Env) -> Result<Expr, LispError> {
     let ast = parsing::parse_script().parse(input).unwrap();
     for expr in &ast[..ast.len() - 1] {
-        expr.eval(env)?;
+        expr.expand_all(env)?.eval(env)?;
     }
-    ast[ast.len() - 1].eval(env)
+    let final_expr = &ast[ast.len() - 1];
+    final_expr.expand_all(env)?.eval(env)
 }
 
 #[derive(Debug)]

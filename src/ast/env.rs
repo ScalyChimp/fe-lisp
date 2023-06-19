@@ -1,5 +1,5 @@
 use super::{
-    expr::{eval_forms, Expr, Lambda, Type},
+    expr::{eval_forms, Expr, Lambda, Macro, Type},
     LispError,
 };
 use rustc_hash::FxHashMap as HashMap;
@@ -78,6 +78,62 @@ impl<'a> Default for Env<'a> {
                     bindings: Rc::new(parameters.clone())
                 }
             ))
+        },
+        "macro" => // TODO: remove this code duplication
+        |args, _env| {
+            let parameters = args.first().ok_or(LispError::Arity)?;
+            let body = args.get(1).ok_or(LispError::Arity)?;
+            if args.len() > 2 { return Err(LispError::Arity) };
+            Ok(Expr::Macro(
+                Macro {
+                    body: Rc::new(body.clone()),
+                    bindings: Rc::new(parameters.clone())
+                }
+            ))
+        },
+        "m-expand1" =>
+        |args, env| {
+            let macroed = args[0].expand_once(env)?;
+            Ok(macroed)
+        },
+        "quote" =>
+        |args, _env| {
+            Ok(args[0].clone())
+        },
+        "quasiquote" =>
+        |args, env| {
+            use Expr::*;
+
+            let args = args.to_vec();
+            let mut results = vec![];
+            for element in args.into_iter().rev() {
+                match element {
+                    List(l) => match &l[..] {
+                        [Symbol(s), Symbol(k), rest @ ..] => {
+                            if !rest.is_empty() { Err(LispError::Arity)? }
+                            else {
+                                match s.as_ref() {
+                                    "unquote" => {
+                                        match dbg!(env.data.get(k)) {
+                                            Some(data) => results.push(data.clone()),
+                                            None => results.push(List(l.to_vec())),
+                                        }
+                                    }
+                                    "splice-unquote" => {
+                                        if let List(l) = env.data.get(k).ok_or(LispError::SymbolNotFound(k.to_string()))? {
+                                           results.append(&mut l.clone());
+                                        }
+                                    }
+                                    _ => results.push(List(l.to_vec())),
+                                }
+                            }
+                        },
+                        _ => results.push(List(l.to_vec())),
+                    },
+                    not_a_list => results.push(not_a_list),
+                };
+            }
+            Ok(List(results.into_iter().rev().collect()))
         },
         "def" =>
         |args, env| {
@@ -173,6 +229,7 @@ impl<'a> Default for Env<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Env<'a> {
     pub(super) data: HashMap<String, Expr>,
     pub(super) outer: Option<&'a Env<'a>>,
