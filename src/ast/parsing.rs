@@ -36,3 +36,37 @@ pub fn parse_script() -> impl Parser<char, Vec<Expr>, Error = Simple<char>> {
 
     expr.padded().repeated()
 }
+
+pub mod reader_macros {
+    macro_rules! reader_macro {
+    ($($k:expr => $v:expr),+ $(,)? ) => {{
+        let mut map: ::rustc_hash::FxHashMap<String, String>  = ::rustc_hash::FxHashMap::default();
+        $(map.insert($k.to_string(), format!("({} ", $v.to_string()));)+
+        map
+    }};
+}
+
+    pub fn apply_reader_macros(input: &str) -> String {
+        let mut result = input.to_string();
+        let lut = reader_macro!(
+            "'" => "quote",
+            "`" => "quasiquote",
+            "," => "unquote",
+            ",;" => "splice-unquote"
+        );
+
+        for (k, v) in lut.iter() {
+            if let Some(idx) = result.find(k) {
+                result = result.replace(k, "");
+                result.insert_str(idx, v);
+                if let Some(new_idx) = result[idx + v.len()..].find(')') {
+                    result.insert(idx + new_idx + v.len(), ')');
+                } else if let Some(new_idx) = result[idx + v.len()..].find(' ') {
+                    result.insert(idx + new_idx + v.len(), ')');
+                }
+            }
+        }
+
+        dbg!(result)
+    }
+}

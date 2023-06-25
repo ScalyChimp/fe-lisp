@@ -1,6 +1,7 @@
 #![feature(iterator_try_collect)]
 use ::rustyline::error::ReadlineError;
 use ast::env::{self, Env};
+use ast::parsing::reader_macros::apply_reader_macros;
 pub use chumsky::{prelude::*, Parser};
 use clap::Parser as ArgParser;
 pub use std::{
@@ -31,6 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn eval_script(script: PathBuf, env: &mut Env) -> Result<(), Box<dyn Error>> {
     let input = fs::read_to_string(script)?;
+    let input = apply_reader_macros(&input);
     ast::eval_script(&input, env)?;
     Ok(())
 }
@@ -51,7 +53,7 @@ fn repl(env: &mut Env) -> Result<(), Box<dyn Error>> {
                 rl.add_history_entry(line.as_str())?;
                 rl.save_history("wilf.history")?;
 
-                let result = match ast::eval_expr(&input?, env) {
+                let result = match ast::eval_expr(&apply_reader_macros(&input?), env) {
                     Ok(result) => result.to_string(),
                     Err(err) => format!("Error - {err}"),
                 };

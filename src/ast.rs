@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 pub mod env;
 mod expr;
-mod parsing;
+pub mod parsing;
 
 use crate::Env;
 use expr::{Expr, Type};
