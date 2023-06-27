@@ -102,38 +102,7 @@ impl<'a> Default for Env<'a> {
         },
         "quasiquote" =>
         |args, env| {
-            use Expr::*;
-
-            let args = args.to_vec();
-            let mut results = vec![];
-            for element in args.into_iter().rev() {
-                match element {
-                    List(l) => match &l[..] {
-                        [Symbol(s), Symbol(k), rest @ ..] => {
-                            if !rest.is_empty() { Err(LispError::Arity)? }
-                            else {
-                                match s.as_ref() {
-                                    "unquote" => {
-                                        match dbg!(env.data.get(k)) {
-                                            Some(data) => results.push(data.clone()),
-                                            None => results.push(List(l.to_vec())),
-                                        }
-                                    }
-                                    "splice-unquote" => {
-                                        if let List(l) = env.data.get(k).ok_or(LispError::SymbolNotFound(k.to_string()))? {
-                                           results.append(&mut l.clone());
-                                        }
-                                    }
-                                    _ => results.push(List(l.to_vec())),
-                                }
-                            }
-                        },
-                        _ => results.push(List(l.to_vec())),
-                    },
-                    not_a_list => results.push(not_a_list),
-                };
-            }
-            Ok(List(results.into_iter().rev().collect()))
+            quasiquote(args, env)
         },
         "def" =>
         |args, env| {
@@ -242,4 +211,42 @@ impl Env<'_> {
             data: HashMap::default(),
         }
     }
+}
+
+fn quasiquote(args: &[Expr], env: &mut Env) -> Result<Expr, LispError> {
+    use Expr::*;
+
+    let args = args.to_vec();
+    let mut results = vec![];
+    for element in args.into_iter().rev() {
+        match element {
+            List(l) => match &l[..] {
+                [Symbol(s), Symbol(k), rest @ ..] => {
+                    if !rest.is_empty() {
+                        Err(LispError::Arity)?
+                    } else {
+                        match s.as_ref() {
+                            "unquote" => match dbg!(env.data.get(k)) {
+                                Some(data) => results.push(data.clone()),
+                                None => results.push(List(l.to_vec())),
+                            },
+                            "splice-unquote" => {
+                                if let List(l) = env
+                                    .data
+                                    .get(k)
+                                    .ok_or(LispError::SymbolNotFound(k.to_string()))?
+                                {
+                                    results.append(&mut l.clone());
+                                }
+                            }
+                            _ => results.push(List(l.to_vec())),
+                        }
+                    }
+                }
+                _ => results.push(quasiquote(&l[..], env)?),
+            },
+            not_a_list => results.push(not_a_list),
+        };
+    }
+    Ok(List(results.into_iter().rev().collect()))
 }

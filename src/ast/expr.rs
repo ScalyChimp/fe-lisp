@@ -63,7 +63,7 @@ impl Expr {
     pub fn expand_all(&self, env: &mut Env) -> Result<Expr, LispError> {
         use Expr::*;
 
-        match self {
+        let result = match self {
             List(list) => {
                 let mut list = list.clone();
                 for expr in list[1..].iter_mut() {
@@ -72,6 +72,18 @@ impl Expr {
                 List(list).expand_once(env)
             }
             _ => Ok(self.clone()),
+        };
+
+        // TODO: This is to fix accidentally having a list in a list
+        // which should maybe be fixed in a dif way but this work so.
+        if let Ok(List(ref list)) = result && list.len() == 1 {
+            if let List(l) = &list[0] {
+                 Ok(List(l.to_vec()))
+            } else {
+                result
+            }
+        } else {
+            result
         }
     }
 
