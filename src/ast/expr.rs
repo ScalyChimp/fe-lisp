@@ -76,10 +76,9 @@ impl Expr {
         // TODO: This is to fix accidentally having a list in a list
         // which should maybe be fixed in a dif way but this work so.
         if let Ok(List(ref list)) = result && list.len() == 1 {
-            if let List(l) = &list[0] {
-                 Ok(List(l.to_vec()))
-            } else {
-                result
+            match &list[0] {
+                List(l) => Ok(List(l.to_vec())),
+                _ => result,
             }
         } else {
             result
