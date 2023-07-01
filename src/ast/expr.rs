@@ -48,7 +48,6 @@ impl Expr {
                 [sym @ Symbol(_), args @ ..] => match sym.eval(env) {
                     Ok(Macro(m)) => {
                         let mut new_env = create_scope(&m.bindings, args, env)?;
-                        dbg!(&m);
                         m.body.eval(&mut new_env)
                     }
                     _ => Ok(self.clone()),
@@ -95,7 +94,7 @@ impl Expr {
             Number(n) => Ok(Number(*n)),
             Bool(n) => Ok(Bool(*n)),
             Symbol(s) => {
-                let data = env_get(s, env).ok_or_else(|| SymbolNotFound(s.to_string()))?;
+                let data = env.get(s).ok_or_else(|| SymbolNotFound(s.to_string()))?;
                 Ok(data)
             }
             List(list) => match &list[..] {
@@ -159,16 +158,6 @@ pub(super) fn eval_forms(args: &[Expr], env: &mut Env) -> Result<Vec<Expr>, Lisp
     args.iter().map(|expr| Expr::eval(expr, env)).collect()
 }
 
-fn env_get(k: &str, env: &Env) -> Option<Expr> {
-    match env.data.get(k) {
-        Some(exp) => Some(exp.clone()),
-        None => match &env.outer {
-            Some(outer_env) => env_get(k, outer_env),
-            None => None,
-        },
-    }
-}
-
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -178,7 +167,7 @@ impl fmt::Debug for Expr {
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
-            Expr::Macro(_) => f.debug_tuple("Macro").finish(),
+            Self::Macro(arg0) => f.debug_tuple("Macro").field(arg0).finish(),
         }
     }
 }

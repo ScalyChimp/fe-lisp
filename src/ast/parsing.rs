@@ -52,21 +52,60 @@ pub mod reader_macros {
             "'" => "quote",
             "`" => "quasiquote",
             "," => "unquote",
-            ",;" => "splice-unquote"
+            "^" => "splice-unquote"
         );
 
         for (k, v) in lut.iter() {
-            if let Some(idx) = result.find(k) {
-                result = result.replace(k, "");
+            while let Some(idx) = result.find(k) {
+                let starts_with_bracket = result[idx + 1..].starts_with('(');
+
+                result = result.replacen(k, "", 1);
                 result.insert_str(idx, v);
-                if let Some(new_idx) = result[idx + v.len()..].find(')') {
-                    result.insert(idx + new_idx + v.len(), ')');
-                } else if let Some(new_idx) = result[idx + v.len()..].find(' ') {
-                    result.insert(idx + new_idx + v.len(), ')');
-                }
+
+                let offset = idx + v.len();
+                if let Some(idx) = &result[offset..].find(' ') && !starts_with_bracket {
+                        result.insert(offset + idx, ')');
+                    } else {
+                        match find_end_of_expr(&result[offset..]) {
+                            Some(idx) => result.insert(offset+idx, ')'),
+                            None => result.push(')'),
+                        };
+                    }
             }
         }
 
-        dbg!(result)
+        result
+    }
+
+    fn find_end_of_expr(input: &str) -> Option<usize> {
+        let input = input.to_string();
+        let mut stack = vec![];
+        for (index, char) in input.chars().enumerate() {
+            if char == ')' {
+                if stack.is_empty() {
+                    return Some(index);
+                }
+                if stack.len() == 1 && stack.last() == Some(&'(') {
+                    return Some(index);
+                }
+                if stack.last() == Some(&'(') {
+                    stack.pop();
+                } else {
+                    stack.push(char);
+                }
+            } else if char == '(' {
+                stack.push(char);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn quasiquote_reader_macro() {
+        let input = r#"`(def ,name (fn ,args ^body))"#;
+        let output =
+            r#"(quasiquote (def (unquote name) (fn (unquote args) (splice-unquote body))))"#;
+        let result = apply_reader_macros(input);
+        assert_eq!(result, output);
     }
 }

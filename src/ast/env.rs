@@ -211,6 +211,16 @@ impl Env<'_> {
             data: HashMap::default(),
         }
     }
+
+    pub fn get(&self, k: &str) -> Option<Expr> {
+        match self.data.get(k) {
+            Some(exp) => Some(exp.clone()),
+            None => match &self.outer {
+                Some(outer_env) => outer_env.get(k),
+                None => None,
+            },
+        }
+    }
 }
 
 fn quasiquote(args: &[Expr], env: &mut Env) -> Result<Expr, LispError> {
@@ -226,17 +236,17 @@ fn quasiquote(args: &[Expr], env: &mut Env) -> Result<Expr, LispError> {
                         Err(LispError::Arity)?
                     } else {
                         match s.as_ref() {
-                            "unquote" => match dbg!(env.data.get(k)) {
+                            "unquote" => match env.get(k) {
                                 Some(data) => results.push(data.clone()),
                                 None => results.push(List(l.to_vec())),
                             },
                             "splice-unquote" => {
-                                if let List(l) = env
+                                if let List(l) = &env
                                     .data
                                     .get(k)
                                     .ok_or(LispError::SymbolNotFound(k.to_string()))?
                                 {
-                                    results.append(&mut l.clone());
+                                    results.append(&mut l.iter().cloned().rev().collect());
                                 }
                             }
                             _ => results.push(List(l.to_vec())),

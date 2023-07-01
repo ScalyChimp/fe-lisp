@@ -1,4 +1,5 @@
 #![feature(iterator_try_collect)]
+#![feature(let_chains)]
 use ::rustyline::error::ReadlineError;
 use ast::env::{self, Env};
 use ast::parsing::reader_macros::apply_reader_macros;
