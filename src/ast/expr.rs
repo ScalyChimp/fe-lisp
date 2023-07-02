@@ -14,9 +14,13 @@ pub enum Type {
 #[derive(Clone)]
 pub enum Expr {
     Symbol(String),
+    String(String),
+
     Number(i64),
     Bool(bool),
+
     List(Vec<Expr>),
+
     Lambda(Lambda),
     Fn(fn(&[Expr], &mut Env) -> Result<Expr, LispError>),
     Macro(Macro),
@@ -92,6 +96,7 @@ impl Expr {
         match self {
             Number(n) => Ok(Number(*n)),
             Bool(n) => Ok(Bool(*n)),
+            String(s) => Ok(String(s.to_string())),
             Symbol(s) => {
                 let data = env.get(s).ok_or_else(|| SymbolNotFound(s.to_string()))?;
                 Ok(data)
@@ -163,6 +168,7 @@ impl fmt::Debug for Expr {
             Self::Fn(_) => f.debug_tuple("Fn").finish(),
             Self::Lambda(arg0) => f.debug_tuple("Lambda").field(arg0).finish(),
             Self::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
+            Self::String(arg0) => f.debug_tuple("String").field(arg0).finish(),
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
@@ -175,6 +181,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let str = match self {
             Self::Symbol(s) => s.clone(),
+            Self::String(s) => format!(r#""{}""#, s),
             Self::Bool(b) => b.to_string(),
             Self::Number(n) => n.to_string(),
             Self::Fn(_) => "#<builtin>".to_string(),

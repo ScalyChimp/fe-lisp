@@ -10,23 +10,37 @@ pub fn parse_expr() -> impl Parser<char, Expr, Error = Simple<char>> {
         text::keyword("false").to(Expr::Bool(false)),
     ));
 
-    let sym = filter(|&c: &char| c != '(' && c != ')' && c != ' ')
+    let string = just('"')
+        .ignore_then(none_of('"').repeated())
+        .then_ignore(just('"'))
+        .collect::<String>()
+        .map(Expr::String);
+
+    let line_comment = just(";;").then(take_until(text::newline())).ignored();
+    let block_comment = just("#|").then(take_until(just("|#"))).ignored();
+    let comments = choice((line_comment, block_comment)).padded().repeated();
+
+    let sym = filter(|&c: &char| c != '(' && c != ')' && c != ' ' && c != '"' && c != '#')
         .repeated()
         .at_least(1)
         .at_most(64)
         .padded()
-        .map(|x| x.iter().collect::<String>())
+        .collect::<String>()
         .map(|x| Expr::Symbol(x.trim().to_string()));
 
     let expr = recursive(|expr| {
-        expr.padded()
-            .repeated()
-            .map(Expr::List)
-            .delimited_by(just("("), just(")"))
-            .or(negative_num)
-            .or(positive_num.map(Expr::Number))
-            .or(bool)
-            .or(sym)
+        choice((
+            expr.padded()
+                .repeated()
+                .map(Expr::List)
+                .delimited_by(just("("), just(")")),
+            negative_num,
+            positive_num.map(Expr::Number),
+            bool,
+            string,
+            sym,
+        ))
+        .padded_by(comments.or_not())
     });
 
     expr
