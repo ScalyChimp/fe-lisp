@@ -6,7 +6,7 @@ use std::{fmt, rc::Rc, string::ToString};
 pub enum Type {
     Fn,
     Symbol,
-    Number,
+    Integer,
     List,
     Bool,
 }
@@ -16,7 +16,7 @@ pub enum Expr {
     Symbol(String),
     String(String),
 
-    Number(i64),
+    Float(f64),
     Bool(bool),
 
     List(Vec<Expr>),
@@ -94,7 +94,7 @@ impl Expr {
         use LispError::*;
 
         match self {
-            Number(n) => Ok(Number(*n)),
+            Float(n) => Ok(Float(*n)),
             Bool(n) => Ok(Bool(*n)),
             String(s) => Ok(String(s.to_string())),
             Symbol(s) => {
@@ -169,7 +169,7 @@ impl fmt::Debug for Expr {
             Self::Lambda(arg0) => f.debug_tuple("Lambda").field(arg0).finish(),
             Self::Symbol(arg0) => f.debug_tuple("Symbol").field(arg0).finish(),
             Self::String(arg0) => f.debug_tuple("String").field(arg0).finish(),
-            Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
+            Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
             Self::List(arg0) => f.debug_tuple("List").field(arg0).finish(),
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
             Self::Macro(arg0) => f.debug_tuple("Macro").field(arg0).finish(),
@@ -183,7 +183,7 @@ impl fmt::Display for Expr {
             Self::Symbol(s) => s.clone(),
             Self::String(s) => format!(r#""{}""#, s),
             Self::Bool(b) => b.to_string(),
-            Self::Number(n) => n.to_string(),
+            Self::Float(n) => n.to_string(),
             Self::Fn(_) => "#<builtin>".to_string(),
             Self::Macro(_) => "#<macro>".to_string(),
             Self::Lambda(_) => "#<function>".to_string(),

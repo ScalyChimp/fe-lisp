@@ -4,7 +4,19 @@ use chumsky::Parser;
 
 pub fn parse_expr() -> impl Parser<char, Expr, Error = Simple<char>> {
     let positive_num = text::int(10).from_str::<i64>().unwrapped();
-    let negative_num = just('-').then(positive_num).map(|x| Expr::Number(-x.1));
+    let negative_num = just('-').then(positive_num).map(|x| -x.1);
+    let float = negative_num
+        .or(positive_num)
+        .then(just('.').or_not().ignore_then(positive_num.or_not()))
+        .map(|x| {
+            let int_part = x.0 as f64;
+            let dec_part = if let Some(n) = x.1 { n } else { 0 };
+            let dec_part = dec_part as f64
+                * 10.0_f64.powi(-(dec_part.checked_ilog10().unwrap_or(0) as i32 + 1_i32)) // this turns any number into a fractional part
+                * int_part.signum();
+            int_part + dec_part
+        });
+
     let bool = choice((
         text::keyword("true").to(Expr::Bool(true)),
         text::keyword("false").to(Expr::Bool(false)),
@@ -34,8 +46,7 @@ pub fn parse_expr() -> impl Parser<char, Expr, Error = Simple<char>> {
                 .repeated()
                 .map(Expr::List)
                 .delimited_by(just("("), just(")")),
-            negative_num,
-            positive_num.map(Expr::Number),
+            float.map(Expr::Float),
             bool,
             string,
             sym,

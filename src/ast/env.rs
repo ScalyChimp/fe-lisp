@@ -3,24 +3,24 @@ use super::{
     LispError,
 };
 use rustc_hash::FxHashMap as HashMap;
-use std::{rc::Rc, time::Instant};
+use std::{io::Write, rc::Rc, time::Instant};
 
 macro_rules! tonicity {
     ($op:tt) => {{
         |args, env| {
+            fn op(a: f64, b: f64) -> bool { a $op b }
             let args = parse_nums(&args, env)?;
-            fn op(a: i64, b: i64) -> bool { a $op b }
             let is_tonic = args.windows(2).all(|x| op(x[0], x[1]));
             Ok(Expr::Bool(is_tonic))
         }
     }};
 }
 
-fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<i64>, LispError> {
+fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<f64>, LispError> {
     list.iter()
         .map(|expr| match expr.eval(env) {
-            Ok(Expr::Number(n)) => Ok(n),
-            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Number, not_a_number)),
+            Ok(Expr::Float(n)) => Ok(n),
+            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Integer, not_a_number)),
             Err(e) => Err(e),
         })
         .collect()
@@ -37,59 +37,40 @@ macro_rules! env {
 impl<'a> Default for Env<'a> {
     fn default() -> Env<'a> {
         let data = env!(
+        "=" => tonicity!(==),
+        "<" => tonicity!(<),
+        ">" => tonicity!(>),
+        "<=" => tonicity!(<=),
+        ">=" => tonicity!(>=),
         "+" =>
         |args, env| {
             let args = &parse_nums(args, env)?[..];
-            Ok(Expr::Number(args.iter().sum()))
+            Ok(Expr::Float(args.iter().sum()))
         },
         "-" =>
         |args, env| {
             let args = &parse_nums(args, env)?[..];
             let first = &args[0];
-            Ok(Expr::Number(
+            Ok(Expr::Float(
                 first
                  - args[1..]
                     .iter()
-                    .sum::<i64>()))
+                    .sum::<f64>()))
         },
         "*" =>
         |args, env| {
             let args = &parse_nums(args, env)?[..];
-            Ok(Expr::Number(args.iter().product()))
+            Ok(Expr::Float(args.iter().product()))
         },
         "/"  =>
         |args, env| {
             let args = &parse_nums(args, env)?[..];
             let first = &args[0];
-            Ok(Expr::Number(
+            Ok(Expr::Float(
                 first
                  / args[1..]
                     .iter()
-                    .product::<i64>()))
-        },
-        "fn" =>
-        |args, _env| {
-            let parameters = args.first().ok_or(LispError::Arity)?;
-            let body = args.get(1).ok_or(LispError::Arity)?;
-            if args.len() > 2 { return Err(LispError::Arity) };
-            Ok(Expr::Lambda(
-                Lambda {
-                    body: Rc::new(body.clone()),
-                    bindings: Rc::new(parameters.clone())
-                }
-            ))
-        },
-        "macro" => // TODO: remove this code duplication
-        |args, _env| {
-            let parameters = args.first().ok_or(LispError::Arity)?;
-            let body = args.get(1).ok_or(LispError::Arity)?;
-            if args.len() > 2 { return Err(LispError::Arity) };
-            Ok(Expr::Macro(
-                Macro {
-                    body: Rc::new(body.clone()),
-                    bindings: Rc::new(parameters.clone())
-                }
-            ))
+                    .product::<f64>()))
         },
         "m-expand1" =>
         |args, env| {
@@ -122,11 +103,6 @@ impl<'a> Default for Env<'a> {
 
             Ok(first.clone())
         },
-        "=" => tonicity!(==),
-        "<" => tonicity!(<),
-        ">" => tonicity!(>),
-        "<=" => tonicity!(<=),
-        ">=" => tonicity!(>=),
         "if" =>
         |args, env| {
             if args.len() > 3 { return Err(LispError::Arity) };
@@ -144,6 +120,30 @@ impl<'a> Default for Env<'a> {
             let mut env = Env::with_outer(env);
             let _ = eval_forms(rest, &mut env)?;
             args.last().expect("args list should not be empty").eval(&mut env) // TODO: Fix possible panic.
+        },
+        "fn" =>
+        |args, _env| {
+            let parameters = args.first().ok_or(LispError::Arity)?;
+            let body = args.get(1).ok_or(LispError::Arity)?;
+            if args.len() > 2 { return Err(LispError::Arity) };
+            Ok(Expr::Lambda(
+                Lambda {
+                    body: Rc::new(body.clone()),
+                    bindings: Rc::new(parameters.clone())
+                }
+            ))
+        },
+        "macro" => // TODO: remove this code duplication
+        |args, _env| {
+            let parameters = args.first().ok_or(LispError::Arity)?;
+            let body = args.get(1).ok_or(LispError::Arity)?;
+            if args.len() > 2 { return Err(LispError::Arity) };
+            Ok(Expr::Macro(
+                Macro {
+                    body: Rc::new(body.clone()),
+                    bindings: Rc::new(parameters.clone())
+                }
+            ))
         },
         "let" =>
         |args, env| {
@@ -179,8 +179,27 @@ impl<'a> Default for Env<'a> {
         |args, env| {
             if args.len() != 1 { return Err(LispError::Arity) };
             let result = args[0].eval(env)?;
+            print!("{}", result);
+            Ok(result)
+        },
+        "println" =>
+        |args, env| {
+            if args.len() != 1 { return Err(LispError::Arity) };
+            let result = args[0].eval(env)?;
             println!("{}", result);
             Ok(result)
+        },
+        "readline" =>
+        |args, _env| {
+            if args.len() > 1 { return Err(LispError::Arity) };
+            if let Some(Expr::String(s)) = args.get(0) {
+                print!("{s}");
+                let _ = std::io::stdout().flush();
+            }
+            let mut buf = String::with_capacity(256);
+            let _ = std::io::stdin().read_line(&mut buf);
+            buf = String::from(buf.trim_end());
+            Ok(Expr::String(buf))
         },
         "time" =>
         |args, env| {
