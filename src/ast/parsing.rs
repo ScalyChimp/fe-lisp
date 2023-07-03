@@ -69,7 +69,7 @@ pub mod reader_macros {
             "^" => "splice-unquote"
         );
 
-        for (k, v) in lut.iter() {
+        for (k, v) in &lut {
             while let Some(idx) = result.find(k) {
                 let starts_with_bracket = result[idx + 1..].starts_with('(');
 

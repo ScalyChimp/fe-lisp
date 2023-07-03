@@ -81,7 +81,7 @@ impl Expr {
         // which should maybe be fixed in a dif way but this work so.
         if let Ok(List(ref list)) = result && list.len() == 1 {
             match &list[0] {
-                List(l) => Ok(List(l.to_vec())),
+                List(l) => Ok(List(l.clone())),
                 _ => result,
             }
         } else {
@@ -103,7 +103,7 @@ impl Expr {
             }
             List(list) => match &list[..] {
                 [first, rest @ ..] => match first.eval(env)? {
-                    Fn(func) => Ok(func(rest, env)?),
+                    Fn(func) => func(rest, env),
                     Lambda(lambda) => {
                         let args = eval_forms(rest, env)?;
                         let new_env = &mut create_scope(&lambda.bindings, &args, env)?;
@@ -189,7 +189,7 @@ impl fmt::Display for Expr {
             Self::Lambda(_) => "#<function>".to_string(),
             Self::List(list) => {
                 let xs: Vec<String> = list.iter().map(ToString::to_string).collect();
-                format!("'({})", xs.join(" "))
+                format!("({})", xs.join(" "))
             }
         };
         write!(f, "{}", str)

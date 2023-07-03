@@ -205,7 +205,7 @@ pub struct Env<'a> {
 }
 
 impl Env<'_> {
-    fn with_outer<'a>(env: &'a mut Env<'_>) -> Env<'a> {
+    fn with_outer<'a>(env: &'a Env<'_>) -> Env<'a> {
         Env {
             outer: Some(env),
             data: HashMap::default(),
@@ -232,13 +232,11 @@ fn quasiquote(args: &[Expr], env: &mut Env) -> Result<Expr, LispError> {
         match element {
             List(l) => match &l[..] {
                 [Symbol(s), Symbol(k), rest @ ..] => {
-                    if !rest.is_empty() {
-                        Err(LispError::Arity)?
-                    } else {
+                    if rest.is_empty() {
                         match s.as_ref() {
                             "unquote" => match env.get(k) {
                                 Some(data) => results.push(data.clone()),
-                                None => results.push(List(l.to_vec())),
+                                None => results.push(List(l.clone())),
                             },
                             "splice-unquote" => {
                                 if let List(l) = &env
@@ -249,8 +247,10 @@ fn quasiquote(args: &[Expr], env: &mut Env) -> Result<Expr, LispError> {
                                     results.append(&mut l.iter().cloned().rev().collect());
                                 }
                             }
-                            _ => results.push(List(l.to_vec())),
+                            _ => results.push(List(l.clone())),
                         }
+                    } else {
+                        Err(LispError::Arity)?
                     }
                 }
                 _ => results.push(quasiquote(&l[..], env)?),
