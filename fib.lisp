@@ -15,5 +15,5 @@
           (fib-iter-helper (+ a b) a (- count 1)))))
 
 (def count 29)
-(print (time (fib-recursive count)))
-(print (time (fib-iter count)))
+(println (time (fib-recursive count)))
+(println (time (fib-iter count)))
