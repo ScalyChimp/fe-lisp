@@ -6,7 +6,7 @@ use std::{fmt, rc::Rc, string::ToString};
 pub enum Type {
     Fn,
     Symbol,
-    Integer,
+    Float,
     List,
     Bool,
 }

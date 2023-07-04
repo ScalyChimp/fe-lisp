@@ -20,7 +20,17 @@ fn parse_nums(list: &[Expr], env: &mut Env) -> Result<Vec<f64>, LispError> {
     list.iter()
         .map(|expr| match expr.eval(env) {
             Ok(Expr::Float(n)) => Ok(n),
-            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Integer, not_a_number)),
+            Ok(not_a_number) => Err(LispError::TypeMismatch(Type::Float, not_a_number)),
+            Err(e) => Err(e),
+        })
+        .collect()
+}
+
+fn parse_bools(list: &[Expr], env: &mut Env) -> Result<Vec<bool>, LispError> {
+    list.iter()
+        .map(|expr| match expr.eval(env) {
+            Ok(Expr::Bool(b)) => Ok(b),
+            Ok(not_a_bool) => Err(LispError::TypeMismatch(Type::Bool, not_a_bool)),
             Err(e) => Err(e),
         })
         .collect()
@@ -51,6 +61,7 @@ impl<'a> Default for Env<'a> {
         |args, env| {
             let args = &parse_nums(args, env)?[..];
             let first = &args[0];
+            if args.len() == 1 { return Ok(Expr::Float(-args[0]))}
             Ok(Expr::Float(
                 first
                  - args[1..]
@@ -71,6 +82,19 @@ impl<'a> Default for Env<'a> {
                  / args[1..]
                     .iter()
                     .product::<f64>()))
+        },
+        "not" =>
+        |args, _env| {
+            if let Expr::Bool(false) = args.get(0).ok_or(LispError::Arity)?.eval(_env)? {
+                Ok(Expr::Bool(true))
+            } else {
+                Ok(Expr::Bool(false))
+            }
+        },
+        "and" =>
+        |args, env| {
+            let bools = parse_bools(args, env)?;
+            Ok(Expr::Bool(!bools.contains(&false)))
         },
         "m-expand1" =>
         |args, env| {
